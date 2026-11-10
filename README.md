@@ -49,6 +49,9 @@ python -m sistema_apuestas analizar --demo --bankroll 1000 --mostrar-descartadas
 python -m sistema_apuestas analizar --deporte futbol --bankroll 500
 python -m sistema_apuestas analizar --deporte todos --region eu --registrar
 
+# NBA sin clave (fuente ESPN, 1 casa de referencia):
+python -m sistema_apuestas analizar --deporte basquet --fuente espn
+
 # Seguimiento:
 python -m sistema_apuestas pendientes
 python -m sistema_apuestas cierre 3 1.22            # cuota de cierre -> CLV
@@ -56,6 +59,29 @@ python -m sistema_apuestas resultado 3 GANADA
 python -m sistema_apuestas rendimiento --por mercado
 python -m sistema_apuestas reglas
 ```
+
+### Apostar en una casa local (Apostala, Paraguay)
+
+Apostala (aposta.la) es el único operador licenciado en Paraguay y no aparece en los
+agregadores de cuotas, así que el sistema la trata como "tu casa": calcula la
+probabilidad justa con una referencia externa y compara contra la cuota que Apostala
+ofrece de verdad. Los informes salen en hora de Paraguay (`--tz America/Asuncion`,
+valor por defecto; cámbialo con `--tz`).
+
+```bash
+# 1) ¿Qué cuota mínima debe pagar Apostala para que una apuesta sea A o A+?
+python -m sistema_apuestas comparar --fuente espn
+
+# 2) Miras esa selección en Apostala y evalúas la cuota real que ofrece:
+python -m sistema_apuestas evaluar --seleccion "Gana New York Knicks" \
+    --cuota 1.17 --casa Apostala --bankroll 1000 --registrar
+```
+
+`evaluar` clasifica la cuota (EV, clase, stake) y puede registrarla. Honestidad del
+método: con referencia de UNA sola casa (ESPN publica DraftKings) el techo es clase
+**B** (observación, stake 0); para que el sistema pueda emitir A/A+ sobre cuotas de
+Apostala hace falta consenso multi-casa (`THE_ODDS_API_KEY`). Registrar las B con
+stake 0 sirve para medir, con datos, si Apostala deja valor antes de arriesgar dinero.
 
 ### Formato de cada recomendación (10 puntos)
 
@@ -114,7 +140,9 @@ sistema_apuestas/
   filtros.py       # filtro de riesgo y clasificación A+/A/B/DESCARTADA
   bankroll.py      # unidades, Kelly fraccional, límites diarios, reglas de oro
   analisis.py      # motor: eventos + cuotas -> oportunidades clasificadas
+  comparar.py      # cuotas mínimas y evaluación de la cuota de TU casa (Apostala)
   fuentes.py       # The Odds API y football-data.org (datos reales, nunca inventados)
+  fuentes_espn.py  # NBA sin clave: partidos, cuotas, récords y lesiones (ESPN)
   seguimiento.py   # SQLite: picks, resultados, ROI, CLV, desgloses
   informe.py       # informe en el formato de 10 puntos
   demo.py          # datos FICTICIOS marcados como DEMO para probar el flujo

@@ -36,6 +36,8 @@ class Criterios:
     cuota_maxima: float = 1.60       # coherente con prob >= 75% + valor
     min_casas: int = 4               # casas mínimas para un consenso fiable
     min_casas_a_plus: int = 6
+    min_casas_absoluto: int = 2      # por debajo, descarte duro (1 al evaluar
+                                     # una cuota propia contra una referencia)
     max_dif_vs_consenso: float = 12.0  # % máx. de la mejor cuota sobre la mediana
 
 
@@ -57,8 +59,9 @@ def clasificar(prob_estimada: float, cuota: float, ev: float,
         return Clasificacion.DESCARTADA, [f"Probabilidad estimada ({prob_estimada:.0%}) demasiado baja para este sistema."]
     if cuota < c.cuota_minima:
         return Clasificacion.DESCARTADA, [f"Cuota {cuota:.2f} por debajo del mínimo {c.cuota_minima:.2f}: riesgo/beneficio insuficiente."]
-    if num_casas < 2:
-        return Clasificacion.DESCARTADA, ["Cuotas de menos de 2 casas: imposible validar el precio."]
+    if num_casas < c.min_casas_absoluto:
+        return Clasificacion.DESCARTADA, [
+            f"Cuotas de menos de {c.min_casas_absoluto} casas: imposible validar el precio."]
     if dif_vs_consenso > c.max_dif_vs_consenso:
         return Clasificacion.DESCARTADA, [
             f"La mejor cuota supera a la mediana del mercado en {dif_vs_consenso:.1f}%: "
