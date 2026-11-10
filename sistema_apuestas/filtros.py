@@ -17,6 +17,7 @@ MERCADOS_ESTABLES = {
     "empate_no_valido",     # draw no bet
     "total_goles",          # más/menos goles
     "handicap_asiatico",
+    "handicap",             # spread de puntos (básquet)
     "ganador",              # moneyline / h2h
     "total_puntos",         # básquet
     "total_juegos",         # tenis

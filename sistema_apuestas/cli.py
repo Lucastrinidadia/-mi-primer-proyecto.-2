@@ -42,15 +42,27 @@ def cmd_analizar(args) -> int:
             _registrar_recomendadas(oportunidades, plan, args.db)
         return 0
 
-    from .fuentes import (ErrorConfiguracion, ErrorFuente,
-                          convertir_eventos, obtener_eventos_con_cuotas)
-    deportes = ([Deporte(args.deporte)] if args.deporte != "todos"
-                else [Deporte.FUTBOL, Deporte.TENIS, Deporte.BASQUET])
+    from .fuentes import ErrorConfiguracion, ErrorFuente
+    contexto: dict[str, list[str]] = {}
     eventos = []
     try:
-        for dep in deportes:
-            crudos = obtener_eventos_con_cuotas(dep, region=args.region)
-            eventos.extend(convertir_eventos(crudos, dep))
+        if args.fuente == "espn":
+            if args.deporte not in ("basquet", "todos"):
+                print("La fuente 'espn' solo cubre NBA (--deporte basquet).",
+                      file=sys.stderr)
+                return 2
+            from .fuentes_espn import eventos_nba
+            eventos, contexto = eventos_nba(args.fecha)
+            print("Fuente: ESPN (NBA). Normalmente publica UNA sola casa, por lo "
+                  "que el filtro no puede validar valor y descartará los mercados; "
+                  "para comparación multi-casa configura THE_ODDS_API_KEY.\n")
+        else:
+            from .fuentes import convertir_eventos, obtener_eventos_con_cuotas
+            deportes = ([Deporte(args.deporte)] if args.deporte != "todos"
+                        else [Deporte.FUTBOL, Deporte.TENIS, Deporte.BASQUET])
+            for dep in deportes:
+                crudos = obtener_eventos_con_cuotas(dep, region=args.region)
+                eventos.extend(convertir_eventos(crudos, dep))
     except ErrorConfiguracion as e:
         print(f"CONFIGURACIÓN NECESARIA:\n{e}", file=sys.stderr)
         return 2
@@ -65,6 +77,9 @@ def cmd_analizar(args) -> int:
         return 0
 
     oportunidades = analizar_eventos(eventos, criterios, plan)
+    if contexto:
+        from .fuentes_espn import enriquecer_con_contexto
+        enriquecer_con_contexto(oportunidades, contexto)
     print(informe(oportunidades, plan, args.mostrar_descartadas))
 
     if args.registrar:
@@ -174,6 +189,10 @@ def construir_parser() -> argparse.ArgumentParser:
                    default="todos")
     a.add_argument("--region", default="eu", choices=["eu", "uk", "us", "au"],
                    help="región de casas de apuestas a comparar")
+    a.add_argument("--fuente", default="oddsapi", choices=["oddsapi", "espn"],
+                   help="oddsapi = multi-casa (requiere clave); espn = NBA sin clave (1 casa)")
+    a.add_argument("--fecha", default=None,
+                   help="fecha AAAAMMDD para la fuente espn (por defecto, hoy)")
     a.add_argument("--demo", action="store_true",
                    help="usar datos FICTICIOS para probar el sistema (no apostar)")
     a.add_argument("--bankroll", type=float, default=None,
